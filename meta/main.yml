@@ -1,0 +1,23 @@
+---
+galaxy_info:
+  author: Leonardo Ochoa Aday
+  description: Role to install AAP operator in OpenShift clusters.
+  company: Red Hat, Inc.
+  license: Apache 2.0 license
+  min_ansible_version: 2.1
+  #  platforms:
+  #    - name: OpenShift
+  #      versions:
+  #        - 4.10.z
+  galaxy_tags:
+    - ansible
+    - k8s
+    - kubernetes
+    - infrastructure
+    - automation
+    - openshift
+
+dependencies: []
+
+collections:
+  - kubernetes.core

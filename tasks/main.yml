@@ -1,0 +1,11 @@
+---
+# Install, check, and configure AAP operator
+- include_tasks: install-aap.yml
+
+# Install, and check AAP Controller
+- include_tasks: install-aap-controller.yml
+  when: aap_controller_enabled is true
+
+# Install, and check AAP Hub
+- include_tasks: install-aap-hub.yml
+  when: aap_hub_enabled is true

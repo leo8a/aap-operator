@@ -1,0 +1,69 @@
+---
+- name: Get AAP info from PackageManifest
+  k8s_info:
+    api_version: packages.operators.coreos.com/v1
+    kind: PackageManifest
+    name: ansible-automation-platform-operator
+    namespace: openshift-marketplace
+  register: aap_object
+
+- name: Set defaultChannel and catalogSource
+  set_fact:
+    operator_channel: "{{ aap_object.resources | json_query('[0].status.defaultChannel') }}"
+    catalog_source: "{{ aap_object.resources | json_query('[0].status.catalogSource') }}"
+
+- name: Create OLM objects for AAP operator
+  k8s:
+    state: present
+    template: "{{ item }}"
+    wait: true
+  loop:
+    - "00_Namespace.yaml.j2"
+    - "01_OperatorGroup.yaml.j2"
+    - "02_Subscription.yaml.j2"
+
+- name: Check AAP operator group (timeout - 20 mins)
+  k8s:
+    api_version: operators.coreos.com/v1
+    kind: OperatorGroup
+    name: ansible-automation-operator-gp
+    namespace: "{{ aap_operator_namespace }}"
+    state: present
+    wait: true
+    wait_timeout: 1200
+
+- name: Check AAP subscription (timeout - 20 mins)
+  k8s:
+    api_version: operators.coreos.com/v1alpha1
+    kind: Subscription
+    name: ansible-automation-platform-sub
+    namespace: "{{ aap_operator_namespace }}"
+    state: present
+    wait: true
+    wait_timeout: 1200
+    wait_condition:
+      type: CatalogSourcesUnhealthy
+      status: "False"
+      reason: AllCatalogSourcesHealthy
+
+- name: Check AAP operator (presence of deployments -> timeout ~20 mins)
+  k8s:
+    api_version: apps/v1
+    kind: Deployment
+    name: "{{ item }}"
+    namespace: "{{ aap_operator_namespace }}"
+    state: present
+    wait: true
+    wait_timeout: 120
+    wait_condition:
+      type: Available
+      status: "True"
+      reason: MinimumReplicasAvailable
+  loop:
+    - automation-controller-operator-controller-manager
+    - automation-hub-operator-controller-manager
+    - resource-operator-controller-manager
+  register: aap_operator
+  retries: 10
+  delay: 30
+  until: aap_operator is not failed

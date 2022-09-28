@@ -1,0 +1,27 @@
+---
+- name: Install Automation Hub operand
+  k8s:
+    state: present
+    template: "03_AutomationHub.yaml.j2"
+    wait: true
+
+- name: Check AAP Hub (presence of objects -> timeout ~20 mins)
+  k8s:
+    api_version: "{{ item.api }}"
+    kind: "{{ item.kind }}"
+    name: "{{ item.name }}"
+    namespace: "{{ aap_operator_namespace }}"
+    state: present
+    wait: true
+    wait_timeout: 120
+  loop:
+    - {api: 'route.openshift.io/v1', kind: 'Route', name: 'automation-hub'}
+    - {api: 'apps/v1', kind: 'Deployment', name: 'automation-hub-content'}
+    - {api: 'apps/v1', kind: 'Deployment', name: 'automation-hub-worker'}
+    - {api: 'apps/v1', kind: 'Deployment', name: 'automation-hub-redis'}
+    - {api: 'apps/v1', kind: 'Deployment', name: 'automation-hub-api'}
+    - {api: 'apps/v1', kind: 'Deployment', name: 'automation-hub-web'}
+  register: aap_hub_deploy
+  retries: 10
+  delay: 30
+  until: aap_hub_deploy is not failed
